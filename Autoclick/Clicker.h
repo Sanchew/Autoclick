@@ -9,6 +9,7 @@
     BOOL isClicking;
     BOOL isWaiting;
     BOOL fnPressed;
+    NSInteger clicks;
     
     NSTimer* waitingTimer;
     NSInteger stationarySeconds;
@@ -23,6 +24,7 @@
 
 - (void)stopClicking;
 - (void)startClicking:(int)button rate:(NSInteger)rate
+                clickTimes:(NSInteger)times randomMilliSecond:(NSInteger) milliSecond
                 startAfter:(NSInteger)start stopAfter:(NSInteger)stop
               ifStationaryFor:(NSInteger)stationary;
 

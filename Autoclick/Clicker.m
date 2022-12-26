@@ -39,15 +39,23 @@
 
 - (BOOL)checkBeforeClicking {
     if ([[NSThread currentThread] isCancelled]) [NSThread exit];
-    if ([[NSDate date] timeIntervalSince1970] - lastMoved >= stationarySeconds)
+    if ([[NSDate date] timeIntervalSince1970] - lastMoved >= stationarySeconds) {
         return !fnPressed;
+    }
     
     return NO;
 }
 
-- (void)clickWithButton:(CGMouseButton)mouseButton {
+- (void)clickWithButton:(CGMouseButton)mouseButton timer:(NSTimer*) timer {
     if (![self checkBeforeClicking]) return;
-
+    if ([[timer userInfo] integerForKey:@"bounce"] > 0) {
+        double interval = (double)(rand() % ([[[timer userInfo] objectForKey:@"bounce"] integerValue] * 2)) / 1000;
+        [NSThread sleepForTimeInterval:interval];
+    }
+    if ([[timer userInfo] integerForKey:@"times"] > 0 && clicks == [[timer userInfo] integerForKey:@"times"]) {
+        [self stopClicking];
+        return;
+    }
     dispatch_sync(dispatch_get_main_queue(), ^{
         CGPoint point = [NSEvent mouseLocation];
 
@@ -89,41 +97,49 @@
         CGEventSetType(click, mouseUpEvent);
         CGEventPost(kCGHIDEventTap, click);
         CFRelease(click);
+        clicks++;
     });
 }
 
-- (void)leftClick {
-    [self clickWithButton:kCGMouseButtonLeft];
+- (void)leftClick:(NSTimer*) timer {
+    [self clickWithButton:kCGMouseButtonLeft timer: timer];
 }
 
-- (void)rightClick {
-    [self clickWithButton:kCGMouseButtonRight];
+- (void)rightClick:(NSTimer*) timer {
+    [self clickWithButton:kCGMouseButtonRight timer: timer];
 }
 
-- (void)middleClick {
-    [self clickWithButton:kCGMouseButtonCenter];
+- (void)middleClick:(NSTimer*) timer {
+    [self clickWithButton:kCGMouseButtonCenter timer: timer];
 }
 
 - (void)clickThread:(NSDictionary*)parameters {
     if (isClicking)
     {
-        NSTimeInterval timeInterval = [[parameters objectForKey:@"rate"] doubleValue] / 1000;
+        NSTimeInterval timeInterval = ([[parameters objectForKey:@"rate"] doubleValue] - [[parameters objectForKey:@"bounce"] doubleValue]) / 1000;
         
         NSRunLoop* runLoop = [NSRunLoop currentRunLoop];
         NSTimer* timer;
         
         SEL selector = nil;
-        
         switch ([[parameters objectForKey:@"button"] intValue]) {
-            case LEFT: selector = @selector(leftClick); break;
-            case RIGHT: selector = @selector(rightClick); break;
-            case MIDDLE: selector = @selector(middleClick); break;
-            default: selector = @selector(leftClick); break;
+            case LEFT: selector = @selector(leftClick:); break;
+            case RIGHT: selector = @selector(rightClick:); break;
+            case MIDDLE: selector = @selector(middleClick:); break;
+            default: selector = @selector(leftClick:); break;
         }
         
-        timer = [NSTimer scheduledTimerWithTimeInterval:timeInterval target:self selector:selector userInfo:nil repeats:YES];
+        timer = [NSTimer scheduledTimerWithTimeInterval:timeInterval target:self selector:selector userInfo:parameters repeats:YES];
         
-        if ([[parameters objectForKey:@"stop"] integerValue] > 0)
+//        if ([[parameters objectForKey:@"times"] integerValue] > 0) {
+//
+//            [NSTimer scheduledTimerWithTimeInterval:[[parameters objectForKey:@"stop"] integerValue]
+//                                             target:self
+//                                           selector:@selector(stopClickingByTimer:)
+//                                           userInfo:[NSDictionary dictionaryWithObject:clickThread forKey:@"clickThread"]
+//                                            repeats:NO];
+//        } else
+        if ([[parameters objectForKey:@"stop"] integerValue] > 0 && [[parameters objectForKey:@"times"] integerValue] == 0)
             [NSTimer scheduledTimerWithTimeInterval:[[parameters objectForKey:@"stop"] integerValue]
                                              target:self
                                            selector:@selector(stopClickingByTimer:)
@@ -179,6 +195,7 @@
     
     [clickThread cancel];
     isClicking = NO;
+    clicks = 0;
     [[NSApp appDelegate] stoppedClicking];
     [statusLabel setStringValue:@"Stopped."];
     [[NSApp appDelegate] defaultIcon];
@@ -205,6 +222,7 @@
 }
 
 - (void)startClicking:(int)button rate:(NSInteger)rate
+                clickTimes:(NSInteger)times randomMilliSecond:(NSInteger) milliSecond
                 startAfter:(NSInteger)start stopAfter:(NSInteger)stop
               ifStationaryFor:(NSInteger)stationary {
     
@@ -212,6 +230,8 @@
     {
         NSLog(@"Button: %d", button);
         NSLog(@"Rate: %ld", rate);
+        NSLog(@"clickTimes: %ld", times);
+        NSLog(@"randomMilliSecond: %ld", milliSecond);
         NSLog(@"Start After: %ld", start);
         NSLog(@"Stop After: %ld", stop);
         NSLog(@"Only if stationary for %ld", stationary);
@@ -221,7 +241,7 @@
     [[[NSApp appDelegate] modeButton] setEnabled:NO];
     isClicking = YES;
     
-    NSDictionary* parameters = [NSDictionary dictionaryWithObjectsAndKeys:[NSNumber numberWithInt:button], @"button", [NSNumber numberWithInteger:rate], @"rate", [NSNumber numberWithInteger:start], @"start", [NSNumber numberWithInteger:stop], @"stop", [NSNumber numberWithInteger:stationary], @"stationary", nil];
+    NSDictionary* parameters = [NSDictionary dictionaryWithObjectsAndKeys:[NSNumber numberWithInt:button], @"button", [NSNumber numberWithInteger:rate], @"rate", [NSNumber numberWithInteger:times], @"times", [NSNumber numberWithInteger:milliSecond], @"bounce", [NSNumber numberWithInteger:start], @"start", [NSNumber numberWithInteger:stop], @"stop", [NSNumber numberWithInteger:stationary], @"stationary", nil];
     
     if (start == 0)
         [self startClickingThread:parameters];

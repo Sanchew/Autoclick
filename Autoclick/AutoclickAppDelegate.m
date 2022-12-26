@@ -26,6 +26,8 @@
 - (void)encodeRestorableState:(NSCoder *)state {
     [state encodeInteger:[buttonSelector indexOfSelectedItem] forKey:@"buttonSelector"];
     [state encodeInteger:[rateSelector integerValue] forKey:@"rateSelector"];
+    [state encodeInteger:[amountSelector integerValue] forKey:@"amountSelector"];
+    [state encodeInteger:[randomIntervalSelector integerValue] forKey:@"randomIntervalSeletor"];
     [state encodeInteger:[rateUnitSelector indexOfSelectedItem] forKey:@"rateUnitSelector"];
     
     [state encodeInteger:[startAfterSelector integerValue] forKey:@"startAfterSelector"];
@@ -45,6 +47,9 @@
     [buttonSelector selectItemAtIndex:[state decodeIntegerForKey:@"buttonSelector"]];
     [rateSelector setIntegerValue:[state decodeIntegerForKey:@"rateSelector"]];
     [rateUnitSelector selectItemAtIndex:[state decodeIntegerForKey:@"rateUnitSelector"]];
+    
+    [amountSelector setIntegerValue:[state decodeIntegerForKey:@"amountSelector"]];
+    [randomIntervalSelector setIntegerValue:[state decodeIntegerForKey:@"randomIntervalSeletor"]];
     
     [startAfterSelector setIntegerValue:[state decodeIntegerForKey:@"startAfterSelector"]];
     [startAfterUnitSelector selectItemAtIndex:[state decodeIntegerForKey:@"startAfterUnitSelector"]];
@@ -233,12 +238,14 @@
         // Rate
         NSInteger selectedRate = [rateSelector intValue];
         NSInteger selectedRateUnit = ([rateUnitSelector indexOfSelectedItem]==0)?1000:60000;
+        NSInteger selectedClickTimes = [amountSelector intValue];
+        NSInteger randomMilliSecond = [randomIntervalSelector intValue];
 
         double rate = selectedRateUnit / selectedRate; // a click every 'rate' (in ms)
         
         // Start Clicking or add the advanced preferences ?
         if (!mode)
-            [clicker startClicking:selectedButton rate:rate startAfter:0 stopAfter:0 ifStationaryFor:0];
+            [clicker startClicking:selectedButton rate:rate clickTimes:selectedClickTimes randomMilliSecond:randomMilliSecond startAfter:0 stopAfter:0 ifStationaryFor:0];
         else
         {
             NSInteger startAfter = ([startAfterCheckbox state])?([startAfterSelector intValue]*(([startAfterUnitSelector indexOfSelectedItem]==0)?1:60)):0;
@@ -247,7 +254,7 @@
                         
             NSInteger stationaryFor = ([ifStationaryCheckbox state])?([ifStationaryForCheckbox state]?[ifStationaryForSelector intValue]:1):0;
             
-            [clicker startClicking:selectedButton rate:rate startAfter:startAfter stopAfter:stopAfter ifStationaryFor:stationaryFor];
+            [clicker startClicking:selectedButton rate:rate clickTimes:selectedClickTimes randomMilliSecond:randomMilliSecond startAfter:startAfter stopAfter:stopAfter ifStationaryFor:stationaryFor];
         }
         
         [self startedClicking];

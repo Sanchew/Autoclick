@@ -38,6 +38,9 @@
     IBOutlet MBNumberField* rateSelector;
     IBOutlet NSPopUpButton* rateUnitSelector;
     
+    IBOutlet MBNumberField* amountSelector;
+    IBOutlet MBNumberField* randomIntervalSelector;
+    
     IBOutlet MBNumberField* startAfterSelector;
     IBOutlet NSPopUpButton* startAfterUnitSelector;
     IBOutlet NSButton* startAfterCheckbox;
